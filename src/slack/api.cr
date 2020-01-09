@@ -7,12 +7,16 @@ class Slack::API
     get_json "/api/users.list", "members", Array(User)
   end
 
-  def channels
-    get_json "/api/channels.list", "channels", Array(Channel)
+  def user_by_email(email)
+    get_json "/api/users.lookupByEmail", "user", User
   end
 
-  def channel_info(channel_id)
-    get_json "/api/channels.info", "channel", Channel, { "channel" => channel_id }
+  def conversations(limit = 100, types = "public_channel", exclude_archived = false)
+    get_json "/api/conversations.list", "channels", Array(Channel), { "limit" => limit.to_s, "types" => types, "exclude_archived" => exclude_archived.to_s }
+  end
+
+  def conversation_info(conv_id, include_num_members = false)
+    get_json "/api/conversations.info", "channel", Channel, { "channel" => conv_id.to_s, "include_num_members" => include_num_members.to_s }
   end
 
   def post_message(text : String, channel : String)

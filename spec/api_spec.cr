@@ -61,16 +61,17 @@ describe Slack::API do
                     "value": "This channel is for fun",
                     "creator": "U024BE7LH",
                     "last_set": 1360782804
-                }
+                },
+                "members": []
             })
 
-    WebMock.stub(:get, "https://slack.com/api/channels.list?token=some_token")
+    WebMock.stub(:get, "https://slack.com/api/conversations.list?token=some_token&limit=100&types=public_channel&exclude_archived=false")
            .to_return(body: %({
           "ok": true,
           "channels": [#{json}]
         }))
 
-    channels = api.channels
+    channels = api.conversations
     channels.size.should eq(1)
 
     channel = channels[0]
@@ -96,16 +97,17 @@ describe Slack::API do
                     "value": "This channel is for fun",
                     "creator": "U024BE7LH",
                     "last_set": 1360782804
-                }
+                },
+                "members": []
             })
 
-    WebMock.stub(:get, "https://slack.com/api/channels.info?token=some_token&channel=C1RDH5HPE")
+    WebMock.stub(:get, "https://slack.com/api/conversations.info?token=some_token&channel=C1RDH5HPE&include_num_members=false")
            .to_return(body: %({
           "ok": true,
           "channel": #{json}
         }))
 
-    channel = api.channel_info("C1RDH5HPE")
+    channel = api.conversation_info("C1RDH5HPE")
 
     JSON.parse(channel.to_json).should eq(JSON.parse(json))
   end
