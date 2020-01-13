@@ -24,22 +24,46 @@ class Slack::API
   end
 
   def post_message(message : Message)
-    params = HTTP::Params.build do |form|
-      form.add "token", @token
-      message.add_params(form)
+    if message.post_at.nil?
+      post_json "/api/chat.postMessage", message.to_json
+    else
+      post_json "/api/chat.scheduleMessage", message.to_json
     end
-
-    post_json "/api/chat.postMessage?#{params}"
   end
 
-  def update_message(message : Message, timestamp : String)
-    encoded_params = HTTP::Params.build do |form|
-      form.add "token", @token
-      form.add "ts", timestamp
-      message.add_params(form)
-    end
+  def post_message_at(text : String, channel : String, time : Time)
+    post_message(Message.new(text: text, channel: channel, post_at: time.to_utc.to_unix.to_s))
+  end
 
-    post_json "/api/chat.update?#{encoded_params}"
+  def post_ephermeral_message(text : String, channel : String, user : String)
+    post_ephermeral_message(Message.new(text: text, channel: channel, user: user))
+  end
+
+  def post_ephermeral_message(message : Message)
+    post_json "/api/chat.postEphermeral", message.to_json
+  end
+
+  def post_me_message(text : String, channel : String, user : String)
+    post_me_message(Message.new(text: text, channel: channel, user: user))
+  end
+
+  def post_me_message(message : Message)
+    post_json "/api/chat.meMessage", message.to_json
+  end
+
+  def update_message(message : Message)
+    post_json "/api/chat.update", message.to_json
+  end
+
+  def delete_message(message : Message)
+    post_json "/api/chat.delete", message.to_json
+  end
+
+  def scheduled_messages(channel : String, limit = 100)
+    post_json "/api/chat.scheduledMessagesList", {
+      "channel" => channel,
+      "limit" => limit,
+    }.to_json
   end
 
   private def get_json(url, field, klass, params = {} of String => String)
@@ -80,6 +104,17 @@ class Slack::API
     # the post message API doesn't support json paylods
     # we send each field as a separate URL param
     response = @client.post url
+    handle(response) do
+      parse_post_response(response.body)
+    end
+  end
+
+  private def post_json(url, body)
+    headers = HTTP::Headers{
+      "Content-Type" => "application/json",
+      "Authorization" => "Bearer #{@token}",
+    }
+    response = @client.post url, headers, body
     handle(response) do
       parse_post_response(response.body)
     end
